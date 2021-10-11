@@ -1,7 +1,7 @@
 ## CenOTAPH: COlour and Texture Analysis toolbox for PytHon
 
 ## Note
-The toolbox is not ready for production and is subject to frequent changes.
+The toolbox is not ready for production and is subject to frequent changes (please see also Disclaimer below).
 
 ## Dependencies
 _Under construction_
