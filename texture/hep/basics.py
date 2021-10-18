@@ -1,12 +1,14 @@
-import math
+"""Generic functions and base classes for histograms of equivalent patterns"""
+
+from abc import abstractmethod
 
 import numpy as np
 
 import cenotaph.combinatorics.transformation_groups as tg
-from cenotaph.basics.generic_functions import convert_base
+from cenotaph.basics.base_classes import ImageDescriptor
+from cenotaph.basics.generic_functions import convert_base, multilevel_thresholding
+from cenotaph.basics.neighbourhood import DigitalCircleNeighbourhood
 from cenotaph.combinatorics.necklaces_and_bracelets import find_orbits
-
-"""Generic functions and base classes for histograms of equivalent patterns"""
 
 def replace_words(words_in, old_dictionary, new_dictionary):
     """Replace any occurrence that appear in old dictionary with the
@@ -93,7 +95,7 @@ def group_invariant_dictionary(dictionary_in, num_colours, num_points,
     #Return the group-invariant labels
     return dictionary_out
 
-class HEP():
+class HEP(ImageDescriptor):
     """Base class for Histograms of Equivalent Patterns"""
     
     def __init__(self, radius=1, num_peripheral_points=8, is_full=True,
@@ -161,46 +163,84 @@ class HEP():
     
     def _get_weights(self):
         return self._weights 
+        
+    @abstractmethod
+    def _get_pattern_maps(self):
+        """Returns the pattern maps
+        
+        Returns
+        -------
+        pattern_maps: list of ndarrays of int (H,W)
+            The class-specific pattern maps. Grey-scale methods return one
+            pattern maps; colour methods can return more than one (intra- and
+            inter-channel features)
+        """
     
-    def _compute_features(self):
-        """Compute the histogram of equivalent patterns
+    @staticmethod
+    def _compute_invariant_patterns():
+        """Substitutes the original patterns with action-invariant ones
         
         Parameters
         ----------
-        img : Image
-            The input image
+        
         """
         
-        features = np.array([])
+    @staticmethod
+    def _compute_histogram(pattern_map, dictionary):
+        """Compute the normalised histogram of the pattern map over a given
+        dictionary.
         
-        #Generate displaced copies of the input image
-        self._img_layers = matrix_displaced_copies(self._img_in.get_data(), 
-                                                   self._neighbourhood.\
-                                                   get_integer_points())  
-        #Compute the pattern map
-        patterns = self._compute_patterns()
-        
-        #Get the dictionary and compute the bin edges
-        dictionary = self._get_dictionary()
-        
-        #Manage invariance to group actions
-        if self._group_action is not None:
-            invariant_dictionary = self._get_invariant_dictionary()
-            invariant_patterns = replace_words(patterns, 
-                                               dictionary, 
-                                               invariant_dictionary)
-            #Rebind the variables
-            dictionary = list(set(invariant_dictionary))
-            patterns = invariant_patterns
+        Parameters
+        ----------
+        pattern_map: ndarray of int (H,W)
+            The pattern map.
+        dictionary: ndarray of int (D)
+            The dictionary.
+            
+        Returns
+        -------
+        histogram: ndarray of float (D)
+            The probability of occurrence of each word of the dictionary in the
+            pattern map
+        """
         
         #Define the histogram hedges based on the dictionary
         bin_edges = np.append(dictionary, np.max(dictionary) + 1)
         
         #Compute the first-order statistics over the pattern map
-        features, _ = np.histogram(patterns, 
-                                   bin_edges, 
-                                   density=True)
+        histogram, _ = np.histogram(pattern_map.flatten(), 
+                                    bin_edges, 
+                                    density=True)    
         
+        return histogram
+    
+    def _compute_features(self):
+        
+        features = np.array([])
+          
+        #Compute the pattern maps
+        pattern_maps = self._get_pattern_maps()
+        
+        #Get the dictionary and compute the bin edges
+        dictionary = self._get_dictionary()
+        
+        for pattern_map in pattern_maps:
+            
+            patterns = pattern_map.flatten()
+                    
+            #Manage invariance to group actions
+            if self._group_action is not None:
+                invariant_dictionary = self._get_invariant_dictionary()
+                invariant_patterns = replace_words(patterns, 
+                                                   dictionary, 
+                                                   invariant_dictionary)
+                #Rebind the variables
+                dictionary = list(set(invariant_dictionary))
+                patterns = invariant_patterns
+        
+            features_ = self._compute_histogram(patterns, dictionary)
+            features = np.hstack((features, features_))
+                
         return features
     
     def _generate_patterns_by_thresholding(self, data_in, pivot, thresholds, 
@@ -277,3 +317,117 @@ class HEP():
         """
         mask = np.tile(weights, (height,width,1))
         return mask  
+    
+    @abstractmethod
+    def _get_pattern_maps(self):
+        """Generate the pattern map. This is the 'kernel function'
+        as defined in Fernández et al. 2013.
+                
+        Returns
+        -------
+        patterns : ndarray of int (H,W,D) 
+            The pattern map, where (H,W) are the height and width of the
+            input image; D the pattern length.
+        """
+    
+    @abstractmethod
+    def _get_dictionary(self):
+        """Dictionary of texton codes generated by the descriptor
+        
+        Returns
+        -------
+        dictionary : ndarray of int
+            The dictionary of texton codes as decimal integers
+        """
+    
+    @abstractmethod
+    def _get_num_colours(self):
+        """Number of colours (symbols) used for pattern encoding
+        
+        Returns
+        -------
+        num_colours : int
+            The number of colours
+        """
+    
+    def _get_name_of_invariant_dictionary(self):
+        """Conventional name for the group-invariant dictionary of texton codes 
+        generated by the descriptor. Used for caching the dictionary.
+    
+        Returns
+        -------
+        name : str
+            Conventional name for the group-invariant dictionary 
+        """
+        retval = self.__class__.__name__\
+            + '-' + self._group_action\
+            + '-' + str(self._get_num_peripheral_points()) + 'beads'\
+            + '-' + str(self._get_num_colours()) + 'colours'
+        return retval
+        
+        
+    def _get_invariant_dictionary(self):
+        """Return the dictionary of texton codes invariant under a 
+        group action
+        
+        Returns
+        -------
+        invariant_dict : list of int
+            The group-invariant dictionary
+        """
+
+        try:
+            source = self._cache_folder + '/'\
+                + self._get_name_of_invariant_dictionary()\
+                + '.txt'
+            #If a cache folder is provided check if the dictionary is stored 
+            #in the cache; if so, load it.            
+            if os.path.isfile(source):
+                invariant_dict = list()
+                with open(source) as in_file:
+                    record = None
+                    while record != "":
+                        record = in_file.readline()
+                        record = record.strip('\n')
+                        fields = record.split(',')
+                        try:
+                            invariant_dict.append(int(fields[1]))
+                        except:
+                            break
+            #Otherwise compute and store tye dictionary
+            else:
+                invariant_dict = self._compute_invariant_dictionary()
+                original_dict = self._get_dictionary()
+                with open(source, 'w') as out_file:
+                    for _, i in enumerate(original_dict):
+                        out_file.write('{:d},{:d}\n'.format(original_dict[i],
+                                                            invariant_dict[i]))
+                
+        #If no cache folder is given just compute the dictionary without 
+        #storing it        
+        except AttributeError:          
+            invariant_dict = self._compute_invariant_dictionary()
+        
+        return invariant_dict
+        
+    @abstractmethod
+    def _compute_invariant_dictionary(self):
+        """Compute dictionary of texton codes invariant under a group action
+        
+        Returns
+        -------
+        dictionary : ndarray of int
+            The dictionary of texton codes invariant under group action 
+            as decimal integers
+        """
+        
+    def __repr__(self):
+        retval = self.__class__.__name__\
+            + '-r' + str(self._radius)\
+            + '-n' + str(self._num_peripheral_points)
+        if self._group_action is None:
+            retval = retval + '-gNone'
+        else:
+            retval = retval + '-g' + self._group_action
+        
+        return retval     
