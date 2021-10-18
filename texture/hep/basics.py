@@ -6,7 +6,7 @@ import cenotaph.combinatorics.transformation_groups as tg
 from cenotaph.basics.generic_functions import convert_base
 from cenotaph.combinatorics.necklaces_and_bracelets import find_orbits
 
-"""Generic functions for histograms of equivalent patterns"""
+"""Generic functions and base classes for histograms of equivalent patterns"""
 
 def replace_words(words_in, old_dictionary, new_dictionary):
     """Replace any occurrence that appear in old dictionary with the
@@ -92,3 +92,188 @@ def group_invariant_dictionary(dictionary_in, num_colours, num_points,
         
     #Return the group-invariant labels
     return dictionary_out
+
+class HEP():
+    """Base class for Histograms of Equivalent Patterns"""
+    
+    def __init__(self, radius=1, num_peripheral_points=8, is_full=True,
+                 group_action=None, **kwargs):
+        """Constructor
+
+        Parameters
+        ----------
+        radius : int
+            The radius of the digital circle.
+        num_peripheral_points : int
+            The number of peripheral points in the neighbourhood.
+        is_full : bool
+            Whether the base neighbourhood is full (i.e. contains the
+            central pixel or not).
+        group_action : str
+            String indicating whether group-invariant features should be
+            computed. Possible values are:
+                'S' -> symmetric group
+                'A' -> alternating group
+                'C' -> cyclic group
+                'D' -> dihedral group
+        cache_folder (optional) : str
+            Destination folder where to store the group-invariant lookup table.
+            If None the lookup table is computed again each time the
+            descriptor is instantiated.
+        """
+
+        super().__init__()
+        self._radius = radius
+        self._num_peripheral_points = num_peripheral_points
+        self._is_full = is_full
+        self._group_action = group_action
+        self._generate_neighbourhood()
+        
+        if (group_action is not None) and\
+           group_action not in ['S', 'A', 'C',  'D']:
+            raise Exception('Group action not supported')
+        
+        if 'cache_folder' in kwargs.keys():
+            self._cache_folder = kwargs['cache_folder']
+
+    def _generate_neighbourhood(self):
+        if self.is_full():
+            num_points = self._get_num_peripheral_points() + 1
+        else:
+            num_points = self._get_num_peripheral_points()
+            
+        self._neighbourhood = DigitalCircleNeighbourhood(self._radius,  
+                                                         num_points,
+                                                         full = self.is_full())         
+
+    def is_full(self):
+        """Whether the neighbourhood is of type 'full' or not"""
+        return self._is_full
+
+    def _get_num_peripheral_points(self):
+        return self._num_peripheral_points
+            
+    def _get_num_points(self):
+        retval = self._get_num_peripheral_points()
+        if self.is_full():
+            retval = retval + 1
+        return retval
+    
+    def _get_weights(self):
+        return self._weights 
+    
+    def _compute_features(self):
+        """Compute the histogram of equivalent patterns
+        
+        Parameters
+        ----------
+        img : Image
+            The input image
+        """
+        
+        features = np.array([])
+        
+        #Generate displaced copies of the input image
+        self._img_layers = matrix_displaced_copies(self._img_in.get_data(), 
+                                                   self._neighbourhood.\
+                                                   get_integer_points())  
+        #Compute the pattern map
+        patterns = self._compute_patterns()
+        
+        #Get the dictionary and compute the bin edges
+        dictionary = self._get_dictionary()
+        
+        #Manage invariance to group actions
+        if self._group_action is not None:
+            invariant_dictionary = self._get_invariant_dictionary()
+            invariant_patterns = replace_words(patterns, 
+                                               dictionary, 
+                                               invariant_dictionary)
+            #Rebind the variables
+            dictionary = list(set(invariant_dictionary))
+            patterns = invariant_patterns
+        
+        #Define the histogram hedges based on the dictionary
+        bin_edges = np.append(dictionary, np.max(dictionary) + 1)
+        
+        #Compute the first-order statistics over the pattern map
+        features, _ = np.histogram(patterns, 
+                                   bin_edges, 
+                                   density=True)
+        
+        return features
+    
+    def _generate_patterns_by_thresholding(self, data_in, pivot, thresholds, 
+                                           equalities, weights):
+        """Compute patterns based on thresholding
+        
+        Parameters
+        ----------
+        data_in : ndarray of int or float (H,W,L)
+            The input data - i.e the image patterns. H, W
+            are the height and width of the image; L is the number of points
+            to be compared with pivot.
+        pivot : ndarray of int or float (H,W). 
+            The values against which the input data are to be compared.
+        thresholds : list of int or float
+            The thresholds used for thresholding the difference 
+            (data_in - pivot)
+        equalities : bool
+            Whether to consider specific levels when the input data are exactly
+            equal to the threshold values. This is for instance False for LBP
+            and True for TS.
+        weights : list of int
+            List of weights used to generate the patterns
+            
+        Returns
+        -------
+        patterns : ndarray of int (H,W)
+            The map of patterns as decimal codes
+        """         
+        
+        #Create an empty container for the comparisons
+        comparisons = np.zeros(data_in.shape, dtype = 'int')
+        
+        #Broadcast the pivot values
+        pivot_tiled = np.repeat(pivot[:, :, np.newaxis], 
+                                data_in.shape[-1], 
+                                axis = -1)
+        #np.tile(pivot, (1,1,data_in.shape[-1]))
+        
+        #Create the mask      
+        mask = self._create_mask(comparisons.shape[0], 
+                                 comparisons.shape[1], 
+                                 weights)  
+        #Compute the differences and do the thresholding
+        differences = np.subtract(data_in, pivot_tiled)
+        comparisons = multilevel_thresholding(differences, 
+                                              thresholds,
+                                              self._consider_equalities())
+                       
+        #Generate and return the patterns      
+        patterns = np.multiply(comparisons, mask)
+        patterns = np.sum(patterns, axis=2)
+        
+        return patterns    
+    
+    @staticmethod
+    def _create_mask(height, width, weights):
+        """Generates the multiplication mask for pattern numbering
+        
+        Parameters
+        ----------
+        width, height : int
+            The dimension of the pattern map.
+        pattern_length : int
+            The pattern length (number of characters 'beads' which
+            make up a pattern).
+        weights : list of int
+            The multiplication weights. 
+        
+        Returns
+        -------
+        mask : int (height, width, num_weights)
+            The multiplication mask
+        """
+        mask = np.tile(weights, (height,width,1))
+        return mask  

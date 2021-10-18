@@ -60,7 +60,14 @@ class SVDD(OneClassClassifier):
         return predictions
     
 class NND(OneClassClassifier):
-    """Nearest Neighbour Description"""
+    """Nearest Neighbour Description (see [1, Sec. 4.2.2.4])
+    
+    References
+    ----------
+    [1] Khan, S.S., Madden, M.G.
+        One-class classification: Taxonomy of study and review of techniques
+        (2014) Knowledge Engineering Review, 29 (3), pp. 345-374. 
+    """
     
     def train(self, positive_patterns):
         self._positive_patterns = positive_patterns
@@ -99,3 +106,58 @@ class NND(OneClassClassifier):
         predictions = np.argwhere(dists_test_patterns_to_1st_nn < dists_1st_nn_to_2nd_nn)
             
         return predictions
+    
+class NNPC(OneClassClassifier):
+    """Nearest Neighbour Positive Class (see [1, Sec. 4.2.2.4])
+    
+    References
+    ----------
+    [1] Khan, S.S., Madden, M.G.
+        One-class classification: Taxonomy of study and review of techniques
+        (2014) Knowledge Engineering Review, 29 (3), pp. 345-374. 
+    """  
+    
+    def __init__(self, mode='max'):
+        """
+        Parameters
+        ----------
+        mode: str
+            A string indicating the classification strategy. Can be:
+                'max' -> A target is considered in the class if the distance
+                         from the nearest positive pattern is less than the 
+                         maximum pairwise distance among the nearest 
+                         positive patterns [1, Eq. 2]
+        """
+        self._mode = mode
+        
+    def train(self, positive_patterns):
+        self._positive_patterns = positive_patterns
+        
+        #------ Pairwise distances between nearest positive patterns ------
+        nnsearcher = NearestNeighbors(n_neighbors=2)
+        nnsearcher.fit(self._positive_patterns)       
+        pdists, _ = nnsearcher.kneighbors(self._positive_patterns, 
+                                          return_distance = True)        
+        pdists = pdists[:,1].flatten()
+        #------------------------------------------------------------------
+        
+        if self._mode == 'max':
+            self._threshold = np.max(pdists)
+        else:
+            raise Exception(f'Unsupported mode *{mode}*') 
+        
+    def predict(self, test_patterns):
+        
+        #For each test pattern find the distance to the nearest positive pattern
+        nnsearcher = NearestNeighbors(n_neighbors=1)
+        nnsearcher.fit(self._positive_patterns)
+        target_dists, _ = nnsearcher.kneighbors(test_patterns, 
+                                                return_distance = True)
+        target_dists = target_dists.flatten()
+        
+        #Consider 'in class' the targets whose distance to the nearest positive
+        #pattern in the train group is less than the threshold
+        predictions = np.argwhere(target_dists < self._threshold)
+            
+        return predictions        
+            
