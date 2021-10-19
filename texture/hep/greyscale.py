@@ -27,70 +27,10 @@ class HEPGS(HEP):
                                                   self._neighbourhood.\
                                                   get_integer_points())            
 
-class HEPLocalThresholding(HEP):
-    """HEP methods based on local thresholding - e.g. LBP, ILBP, TS,
-    LTP, etc."""
-    
-    @doc_inherit
-    def __init__(self, radius=1, num_peripheral_points=8, group_action=None, 
-                 **kwargs):
-        super().__init__(radius = radius, 
-                         num_peripheral_points = num_peripheral_points, 
-                         is_full = True,
-                         group_action = group_action, **kwargs)
+#**************************************************************************
+#******** Change _get_pivot and _get_base_valuse to return lists **********
+#**************************************************************************
 
-        #Generate the weights or defining the dictionary
-        self._weights = self._get_num_colours() **\
-            np.arange(self._num_peripheral_points) 
-    
-    @abstractmethod
-    def _get_pivot(self):
-        """Compute the pivot value used for thresholding. This can be,
-        for instance, the value of one specific point in the neighbourhood
-        or the average of all the points
-        
-        Returns
-        -------
-        pivot : ndarray of int or float (H,W)
-        """
-        
-    @abstractmethod
-    def _get_base_values(self):
-        """Compute the base values which will be compared with the pivot
-        values. These can be, for instance, the values of the peripheral
-        points in the neighbourhood or of all the points
-        
-        Returns
-        -------
-        base_values : ndarray of int or float (H,W,L)
-        """
-        
-    @abstractmethod
-    def _consider_equalities(self):
-        """Whether equalities define different levels in the thresholding
-        step. For instance, if there is just one threshold value, say t = 0,
-        and an input value x the thresholding will produce the following 
-        results:
-            level = 0 if x <= 0
-            level = 1 if x > 0
-        -- if the returned value is False --
-        and 
-            level = 0 if x <= 0
-            level = 1 if x = 0
-            level = 2 of x >= 0
-        -- if the returned value is True --
-        """     
-        
-    def _get_pattern_maps(self):
-        
-        self._pre_compute_features()
-                
-        patterns = self._generate_patterns_by_thresholding(
-            self._get_base_values(), self._get_pivot(), 
-            self._get_thresholds(), self._consider_equalities(),
-            self._get_weights())  
-        
-        return [patterns]
          
         
 class LBP(HEPGS, HEPLocalThresholding):
@@ -106,11 +46,11 @@ class LBP(HEPGS, HEPLocalThresholding):
     
     @doc_inherit
     def _get_pivot(self):
-        return self._gs_layers[:,:,self._neighbourhood.center_index()]
+        return [self._gs_layers[:,:,self._neighbourhood.center_index()]]
 
     @doc_inherit
     def _get_base_values(self):
-        return self._gs_layers[:,:,self._neighbourhood.peripheral_indices()]
+        return [self._gs_layers[:,:,self._neighbourhood.peripheral_indices()]]
                         
     def _get_dictionary(self):
         return list(range(self._get_num_colours() **\
@@ -129,17 +69,6 @@ class LBP(HEPGS, HEPLocalThresholding):
     @doc_inherit
     def _get_num_colours(self):
         return 2
-    
-    @doc_inherit
-    def _compute_invariant_dictionary(self):
-        retval = None
-        if self._group_action is not None:
-            retval =\
-                group_invariant_dictionary(self._get_dictionary(),
-                                           num_colours = self._get_num_colours(),
-                                           num_points = self._get_num_peripheral_points(),
-                                           group_action = self._group_action) 
-        return retval
     
     def __repr__(self):
         return super().__repr__()

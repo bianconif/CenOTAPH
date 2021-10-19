@@ -1,6 +1,9 @@
-"""Generic functions and base classes for histograms of equivalent patterns"""
+"""Generic functions and base classes for histograms of equivalent patterns
+based on digital circles"""
 
 from abc import abstractmethod
+
+from cenotaph.third_parties.doc_inherit import doc_inherit
 
 import numpy as np
 
@@ -410,16 +413,15 @@ class HEP(ImageDescriptor):
         
         return invariant_dict
         
-    @abstractmethod
     def _compute_invariant_dictionary(self):
-        """Compute dictionary of texton codes invariant under a group action
-        
-        Returns
-        -------
-        dictionary : ndarray of int
-            The dictionary of texton codes invariant under group action 
-            as decimal integers
-        """
+        retval = None
+        if self._group_action is not None:
+            retval =\
+                group_invariant_dictionary(self._get_dictionary(),
+                                           num_colours = self._get_num_colours(),
+                                           num_points = self._get_num_peripheral_points(),
+                                           group_action = self._group_action) 
+        return retval
         
     def __repr__(self):
         retval = self.__class__.__name__\
@@ -431,3 +433,75 @@ class HEP(ImageDescriptor):
             retval = retval + '-g' + self._group_action
         
         return retval     
+    
+class HEPLocalThresholding(HEP):
+    """HEP methods based on local thresholding - e.g. LBP, ILBP, TS,
+    LTP, etc."""
+    
+    @doc_inherit
+    def __init__(self, radius=1, num_peripheral_points=8, group_action=None, 
+                 **kwargs):
+        super().__init__(radius = radius, 
+                         num_peripheral_points = num_peripheral_points, 
+                         is_full = True,
+                         group_action = group_action, **kwargs)
+
+        #Generate the weights or defining the dictionary
+        self._weights = self._get_num_colours() **\
+            np.arange(self._num_peripheral_points) 
+    
+    @abstractmethod
+    def _get_pivot(self):
+        """Compute the pivot value used for thresholding. This can be,
+        for instance, the value of one specific point in the neighbourhood
+        or the average of all the points
+        
+        Returns
+        -------
+        pivot : list of ndarray of int or float (H,W)
+        """
+        
+    @abstractmethod
+    def _get_base_values(self):
+        """Compute the base values which will be compared with the pivot
+        values. These can be, for instance, the values of the peripheral
+        points in the neighbourhood or of all the points
+        
+        Returns
+        -------
+        base_values : list of ndarray of int or float (H,W,L)
+        """
+        
+    @abstractmethod
+    def _consider_equalities(self):
+        """Whether equalities define different levels in the thresholding
+        step. For instance, if there is just one threshold value, say t = 0,
+        and an input value x the thresholding will produce the following 
+        results:
+            level = 0 if x <= 0
+            level = 1 if x > 0
+        -- if the returned value is False --
+        and 
+            level = 0 if x <= 0
+            level = 1 if x = 0
+            level = 2 of x >= 0
+        -- if the returned value is True --
+        """     
+        
+    def _get_pattern_maps(self):
+        
+        self._pre_compute_features()
+        
+        pattern_maps = list()
+        
+        base_values_and_pivots = zip(self._get_base_values(),
+                                     self._get_pivot())
+        for elem in base_values_and_pivots:
+                    
+            pattern_map = self._generate_patterns_by_thresholding(
+                elem[0], elem[1],
+                self._get_thresholds(), self._consider_equalities(),
+                self._get_weights())  
+            pattern_maps.append(pattern_map)
+        
+        return pattern_maps
