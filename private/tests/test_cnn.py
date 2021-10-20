@@ -6,4 +6,3 @@ img_in = Image(img_file)
 
 densenet121 = cnn.DenseNet121()
 f = vgg16.get_features(img_in)
-a = 0

@@ -444,7 +444,6 @@ class Watershed(ImageSegmenterGS):
         self.set_markers(markers)
         self._compactness = compactness
         self._radius = radius
-        a = 0
         
     def _segment(self, img, **kwargs):
         

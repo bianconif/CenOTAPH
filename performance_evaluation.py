@@ -125,5 +125,5 @@ class PerformanceEvaluator:
         
         #Estimate the performance        
         performance = self._acc_est.get_figures_of_merit(features, ground_truth)
-        a = 0
+        
         return performance

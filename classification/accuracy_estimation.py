@@ -453,7 +453,6 @@ class LeaveOneOut(AccuracyEstimator):
         splits = np.ones((num_patterns, num_patterns), dtype = int)
         np.fill_diagonal(splits, val = 0)
         self._splits = splits
-        a = 0
         
     
 class FullSampling(AccuracyEstimator):

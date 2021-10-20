@@ -470,23 +470,7 @@ class HEPLocalThresholding(HEP):
         Returns
         -------
         base_values : list of ndarray of int or float (H,W,L)
-        """
-        
-    @abstractmethod
-    def _consider_equalities(self):
-        """Whether equalities define different levels in the thresholding
-        step. For instance, if there is just one threshold value, say t = 0,
-        and an input value x the thresholding will produce the following 
-        results:
-            level = 0 if x <= 0
-            level = 1 if x > 0
-        -- if the returned value is False --
-        and 
-            level = 0 if x <= 0
-            level = 1 if x = 0
-            level = 2 of x >= 0
-        -- if the returned value is True --
-        """     
+        """    
         
     def _get_pattern_maps(self):
         
@@ -505,3 +489,20 @@ class HEPLocalThresholding(HEP):
             pattern_maps.append(pattern_map)
         
         return pattern_maps
+    
+    @abstractmethod
+    @classmethod
+    def _consider_equalities(cls):
+        """Whether equalities define different levels in the thresholding
+        step. For instance, if there is just one threshold value, say t = 0,
+        and an input value x the thresholding will produce the following 
+        results:
+            level = 0 if x <= 0
+            level = 1 if x > 0
+        -- if the returned value is False --
+        and 
+            level = 0 if x <= 0
+            level = 1 if x = 0
+            level = 2 of x >= 0
+        -- if the returned value is True --
+        """     

@@ -25,13 +25,7 @@ class HEPGS(HEP):
         #Generate displaced copies of the input image
         self._gs_layers = matrix_displaced_copies(self._img_in.get_data(), 
                                                   self._neighbourhood.\
-                                                  get_integer_points())            
-
-#**************************************************************************
-#******** Change _get_pivot and _get_base_valuse to return lists **********
-#**************************************************************************
-
-         
+                                                  get_integer_points())                     
         
 class LBP(HEPGS, HEPLocalThresholding):
     """Local binary patterns
@@ -63,7 +57,8 @@ class LBP(HEPGS, HEPLocalThresholding):
         return [0]  
     
     @doc_inherit
-    def _consider_equalities(self):
+    @classmethod
+    def _consider_equalities(cls):
         return False
     
     @doc_inherit

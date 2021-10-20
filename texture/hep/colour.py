@@ -22,6 +22,20 @@ class OCLBP(HEPColour, HEPLocalThresholding):
     """Opponent-colour Local binary patterns"""
     
     @doc_inherit
+    def __init__(self, radius=1, num_peripheral_points=8, group_action=None, 
+                 **kwargs):
+        super().__init__(radius=radius, 
+                         num_peripheral_points=num_peripheral_points, 
+                         group_action=group_action, **kwargs)
+        
+        #------------------- Partial inheritance from LBP-----------------------                    
+        self._get_dictionary = LBP.__dict__['_get_dictionary']
+        self._get_thresholds = LBP.__dict__['_get_thresholds']
+        self._consider_equalities = LBP.__dict__['_consider_equalities']
+        self._get_num_colours = LBP.__dict__['_get_num_colours']
+        #----------------------------------------------------------------------        
+    
+    @doc_inherit
     def _get_pivot(self):
         
         pivots = list()
@@ -54,9 +68,3 @@ class OCLBP(HEPColour, HEPLocalThresholding):
         
         return base_values
     
-    #------------------- Partial inheritance from LBP-----------------------                    
-    _get_dictionary = LBP.__dict__['_get_dictionary']
-    _get_thresholds = LBP.__dict__['_get_thresholds']
-    _consider_equalities = LBP.__dict__['_consider_equalities']
-    _get_num_colours = LBP.__dict__['_get_num_colours']
-    #----------------------------------------------------------------------
