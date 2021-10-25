@@ -25,9 +25,29 @@ class HEPGS(HEP):
         #Generate displaced copies of the input image
         self._gs_layers = matrix_displaced_copies(self._img_in.get_data(), 
                                                   self._neighbourhood.\
-                                                  get_integer_points())                     
+                                                  get_integer_points()) 
         
-class LBP(HEPGS, HEPLocalThresholding):
+class LBPBasics(HEP):
+    """Basic functions for LBP-like descriptors"""
+    
+    @staticmethod
+    def _consider_equalities():
+        return False
+    
+    @staticmethod
+    def _get_num_colours():
+        return 2  
+    
+    @staticmethod
+    def _get_thresholds():
+        return [0]
+    
+    def _get_dictionary(self):
+        dictionary = list(range(self._get_num_colours() **\
+                          self._get_num_peripheral_points()))
+        return dictionary    
+        
+class LBP(LBPBasics, HEPGS, HEPLocalThresholding):
     """Local binary patterns
     
     References
@@ -37,7 +57,7 @@ class LBP(HEPGS, HEPLocalThresholding):
         classification with local binary patterns (2002) IEEE Transactions
         on Pattern Analysis and Machine Intelligence, 24 (7), pp. 971-987
     """
-    
+        
     @doc_inherit
     def _get_pivot(self):
         return [self._gs_layers[:,:,self._neighbourhood.center_index()]]
@@ -45,26 +65,7 @@ class LBP(HEPGS, HEPLocalThresholding):
     @doc_inherit
     def _get_base_values(self):
         return [self._gs_layers[:,:,self._neighbourhood.peripheral_indices()]]
-                        
-    def _get_dictionary(self):
-        return list(range(self._get_num_colours() **\
-                          self._get_num_peripheral_points()))
-    
-    def _get_thresholds(self):
-        """Values for thresholding the difference between the peripheral
-        and central pixel
-        """
-        return [0]  
-    
-    @doc_inherit
-    @classmethod
-    def _consider_equalities(cls):
-        return False
-    
-    @doc_inherit
-    def _get_num_colours(self):
-        return 2
-    
+                         
     def __repr__(self):
         return super().__repr__()
     

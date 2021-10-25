@@ -777,7 +777,8 @@ class Ensemble():
             elif self._normalisation_mode == 'by-descriptor':
                 for descriptor in self._descriptors:
                     fv_ = descriptor.get_features(img, normalisation = self._order)
-                    fv = np.hstack((fv, descriptor.get_features(img, normalisation = self._order))) 
+                    fv = np.hstack((fv, fv_)) 
+                    a = 0
             else:
                 raise Exception(f'Normalisation mode {normalisation_mode} not '
                                 f'supported')

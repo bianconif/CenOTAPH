@@ -1,7 +1,7 @@
 from cenotaph.third_parties.doc_inherit import doc_inherit
 
-from cenotaph.texture.hep.basics import HEP, HEPLocalThresholding 
-from cenotaph.texture.hep.greyscale import LBP
+from cenotaph.texture.hep.basics import HEP, HEPLocalThresholding
+from cenotaph.texture.hep.greyscale import LBPBasics
 from cenotaph.basics.matrix_displaced_copies import matrix_displaced_copies
 
 class HEPColour(HEP):
@@ -18,7 +18,7 @@ class HEPColour(HEP):
                                         self._neighbourhood.\
                                         get_integer_points())) 
                
-class OCLBP(HEPColour, HEPLocalThresholding):
+class OCLBP(LBPBasics, HEPColour, HEPLocalThresholding):
     """Opponent-colour Local binary patterns"""
     
     @doc_inherit
@@ -27,14 +27,7 @@ class OCLBP(HEPColour, HEPLocalThresholding):
         super().__init__(radius=radius, 
                          num_peripheral_points=num_peripheral_points, 
                          group_action=group_action, **kwargs)
-        
-        #------------------- Partial inheritance from LBP-----------------------                    
-        self._get_dictionary = LBP.__dict__['_get_dictionary']
-        self._get_thresholds = LBP.__dict__['_get_thresholds']
-        self._consider_equalities = LBP.__dict__['_consider_equalities']
-        self._get_num_colours = LBP.__dict__['_get_num_colours']
-        #----------------------------------------------------------------------        
-    
+                
     @doc_inherit
     def _get_pivot(self):
         
@@ -45,9 +38,9 @@ class OCLBP(HEPColour, HEPLocalThresholding):
             pivots.append(channel[:,:,self._neighbourhood.center_index()])
         
         #Inter-channel pivots
+        pivots.append(self._colour_layers[0][:,:,self._neighbourhood.center_index()])
+        pivots.append(self._colour_layers[0][:,:,self._neighbourhood.center_index()])
         pivots.append(self._colour_layers[1][:,:,self._neighbourhood.center_index()])
-        pivots.append(self._colour_layers[1][:,:,self._neighbourhood.center_index()])
-        pivots.append(self._colour_layers[2][:,:,self._neighbourhood.center_index()])
     
         return pivots
 
@@ -61,8 +54,8 @@ class OCLBP(HEPColour, HEPLocalThresholding):
             base_values.append(channel[:,:,self._neighbourhood.peripheral_indices()])  
             
         #Inter-channel base values -- respectively R, G and B
-        base_values.append(self._colour_layers[0][:,:,self._neighbourhood.peripheral_indices()])
         base_values.append(self._colour_layers[1][:,:,self._neighbourhood.peripheral_indices()])
+        base_values.append(self._colour_layers[2][:,:,self._neighbourhood.peripheral_indices()])
         base_values.append(self._colour_layers[2][:,:,self._neighbourhood.peripheral_indices()])        
         
         
