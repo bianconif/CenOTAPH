@@ -4,6 +4,7 @@ import numpy as np
 from miniball import get_bounding_ball
 from scipy.spatial import distance_matrix
 from sklearn.neighbors import NearestNeighbors
+from sklearn.svm import OneClassSVM
 
 class OneClassClassifier():
     """Abstract base class for one-class classification"""
@@ -39,6 +40,21 @@ class OneClassClassifier():
             Indices of the test patterns that belong to the given class
         """    
 
+class SVM(OneClassClassifier):
+    """One-class support vector classifier"""
+    
+    def __init__(self):
+        self._model = OneClassSVM(gamma='auto')
+        
+    def train(self, positive_patterns):
+        self._model.fit(X = positive_patterns)
+        
+    def predict(self, test_patterns):
+        svm_results = self._model.predict(X = test_patterns)
+        predictions = np.argwhere(svm_results == 1)
+        
+        return predictions
+
 class SVDD(OneClassClassifier):
     """Support Vector Data Description classifier"""
     
@@ -69,6 +85,18 @@ class NND(OneClassClassifier):
         (2014) Knowledge Engineering Review, 29 (3), pp. 345-374. 
     """
     
+    def __init__(self, k=1):
+        """
+        Parameters
+        ----------
+        k: int
+            Define the first neighbour (FPN) as the (positive) train pattern 
+            closest to the test pattern. The parameter defines the number of
+            FPN nearest neighbours over which the average distance
+            is computed.
+        """
+        self._k = k
+    
     def train(self, positive_patterns):
         self._positive_patterns = positive_patterns
         
@@ -84,26 +112,27 @@ class NND(OneClassClassifier):
         dists_test_patterns_to_1st_nn = dists_test_patterns_to_1st_nn.flatten()
         
         #------------------------------------------------------------------
-        #For each 1st nn find the nearest positive pattern (2nd nn) and the
-        #corresponding distance
+        #For each 1st nn find the K nearest positive patterns (2nd nn) and the
+        #corresponding distances
         
         del(nnsearcher)
-        nnsearcher = NearestNeighbors(n_neighbors=2)
+        nnsearcher = NearestNeighbors(n_neighbors=self._k + 1)
         nnsearcher.fit(self._positive_patterns)
         
-        dists_1st_nn_to_2nd_nn, idxs_2nd_nn =\
+        dists_1st_nn_to_knn, idxs_knn =\
             nnsearcher.kneighbors(_1st_nn, return_distance = True)
         
-        #Discard the first nns, which are the query points themselves
-        dists_1st_nn_to_2nd_nn = dists_1st_nn_to_2nd_nn[:,1]
-        dists_1st_nn_to_2nd_nn = dists_1st_nn_to_2nd_nn.flatten()
-        idxs_2nd_nn = idxs_2nd_nn[:,1]
+        #Discard the first k nns, which are the query points themselves
+        dists_1st_nn_to_knn = dists_1st_nn_to_knn[:,1::]
         
+        #Average the distance over the first k nns
+        avg_dist_1st_nn_to_knn = np.mean(dists_1st_nn_to_knn, axis = 1)
+        avg_dist_1st_nn_to_knn = avg_dist_1st_nn_to_knn.flatten()
         #------------------------------------------------------------------
         
         #Return the indices of the patterns for which the distance 1st-nn to
         #2nd-nn is less than that between test pattern and 1st-nn
-        predictions = np.argwhere(dists_test_patterns_to_1st_nn < dists_1st_nn_to_2nd_nn)
+        predictions = np.argwhere(dists_test_patterns_to_1st_nn < avg_dist_1st_nn_to_knn)
             
         return predictions
     
