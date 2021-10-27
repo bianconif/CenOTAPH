@@ -45,7 +45,17 @@ class LBPBasics(HEP):
     def _get_dictionary(self):
         dictionary = list(range(self._get_num_colours() **\
                           self._get_num_peripheral_points()))
-        return dictionary    
+        return dictionary
+    
+class ILBPBasics(LBPBasics):
+    """Basic functions for ILBP-like descriptors"""
+    
+    #Override
+    def _get_dictionary(self):
+        dictionary = list(range(self._get_num_colours() **\
+                          self._get_num_points()))
+        return dictionary        
+        
         
 class LBP(LBPBasics, HEPGS, HEPLocalThresholding):
     """Local binary patterns
@@ -65,6 +75,28 @@ class LBP(LBPBasics, HEPGS, HEPLocalThresholding):
     @doc_inherit
     def _get_base_values(self):
         return [self._gs_layers[:,:,self._neighbourhood.peripheral_indices()]]
+                         
+    def __repr__(self):
+        return super().__repr__()
+    
+class ILBP(ILBPBasics, HEPGS, HEPLocalThresholding):
+    """Improved Local binary patterns
+    
+    References
+    ----------
+    [1] Jin, H., Liu, Q., Lu, H., Tong, X.
+        Face detection using improved LBP under bayesian framework
+        (2004) Proceedings - Third International Conference on Image and 
+        Graphics, pp. 306-309
+    """
+        
+    @doc_inherit
+    def _get_pivot(self):
+        return [np.mean(self._gs_layers, axis=2)]
+
+    @doc_inherit
+    def _get_base_values(self):
+        return [self._gs_layers]
                          
     def __repr__(self):
         return super().__repr__()
@@ -135,59 +167,5 @@ class LTP(LBP):
         
     def __repr__(self):
         return super().__repr__()
-   
-
-class HEPGSEnsemble(ImageDescriptor):
-    """Combination oh HEPGS descriptors"""
-    
-    def __init__(self, name, configuration, type_of_features):
-        """Default constructor
-        
-        Parameters
-        ----------
-        name : str
-            Name of the descriptor. For possible values see HEPGS.factory()
-        configuration : str
-            A string indicating the neighbourhood configuration. Can be:
-                'r1p8-r2p8-r3p8' -> Concatenation of tree concetric 
-                                    neighbourood of radius 1px, 2px and 3px 
-                                    with eight point for each ring.
-        feature_type : str
-            The type of features to be computed. For possible values see 
-            HEPGS.factory()
-        """
-        super().__init__()
-        self._descriptors = list()
-        self._name = name
-        self._configuration = configuration
-        self._type_of_features = type_of_features
-        
-        if self._configuration == 'r1p8-r2p8-r3p8':
-            settings = [{'radius' : 1, 'norm_exp' : 0, 'max_num_points': None},
-                        {'radius' : 2, 'norm_exp' : 1, 'max_num_points': 8},
-                        {'radius' : 3, 'norm_exp' : 1, 'max_num_points': 8}]            
-        else:
-            raise Exception('Configuration not supported')
-        
-        for setting in settings:
-            self._descriptors.append(HEPGS.factory(name, 
-                                                   setting['radius'],
-                                                   setting['norm_exp'],
-                                                   setting['max_num_points']))
-    
-    @doc_inherit        
-    def _compute_features(self):
-        features = np.array([])
-        
-        for descriptor in self._descriptors:
-            f = descriptor.get_features(self._img_in)
-            features = np.concatenate((features, f))
-            
-        return features
-            
-    def __repr__(self):
-        return '{}-{}-{}'.format(self._name, 
-                                 self._configuration, 
-                                 self._type_of_features)
                 
             
