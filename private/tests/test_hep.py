@@ -17,8 +17,7 @@ neighbourhood = nb.DigitalCircleNeighbourhood(radius = 1,
 num_letters = 2
 dictionary_in = range(num_letters ** neighbourhood.get_num_points())
 dictionary_out = group_invariant_dictionary(neighbourhood, 
-                                            dictionary_in, 
-                                            num_letters, 
+                                            dictionary_in,  
                                             group_action = 'C', 
                                             action_type = 'peripheral')
 for _, i in enumerate(dictionary_in):

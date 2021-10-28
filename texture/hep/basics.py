@@ -45,8 +45,8 @@ def replace_words(words_in, old_dictionary, new_dictionary):
     
     return words_out
 
-def group_invariant_dictionary(dictionary_in, num_colours, num_points,
-                               group_action, **kwargs):
+def group_invariant_dictionary(dictionary_in, num_colours, group_action, 
+                               **kwargs):
     """Given an input dictionary compute classes of equivalent words under
     the action of the group given
     
@@ -57,9 +57,6 @@ def group_invariant_dictionary(dictionary_in, num_colours, num_points,
     num_colours : int
         The number of symbols that define the words in the dictionary - i.e.
         base of the decimal representation.
-    num_points : int
-        The number of elements of the set upon which the group acts (length
-        of the words)
     group_action : str
         The group that acts on the patterns. Can be:
             'A' -> alternating group
@@ -141,6 +138,23 @@ class HEP(ImageDescriptor):
         
         if 'cache_folder' in kwargs.keys():
             self._cache_folder = kwargs['cache_folder']
+        
+    def _get_grup_action(self):
+        return self._group_action
+    
+    def _get_center_index(self):
+        """Index of the central point of the neighbourhood
+        
+        Returns
+        -------
+        index: int (or None)
+            Index of the central point of the neighbourhood (None if the
+            neighbourhood is not 'full')
+        """
+        index = None
+        if self._neighbourhood.is_full():
+            index = self._neighbourhood.center_index()
+        return index
 
     def _generate_neighbourhood(self):
         if self.is_full():
@@ -165,8 +179,9 @@ class HEP(ImageDescriptor):
             retval = retval + 1
         return retval
     
+    @abstractmethod
     def _get_weights(self):
-        return self._weights 
+        """Returns the weights for patterns encoding"""
         
     @abstractmethod
     def _get_pattern_maps(self):
@@ -229,7 +244,7 @@ class HEP(ImageDescriptor):
         dictionary = self._get_dictionary()
         
         #Manage invariance to group actions
-        if self._group_action is not None: 
+        if self._get_group_action() is not None: 
             invariant_lut = self._get_invariant_lut()
             invariant_dictionary = self._get_invariant_dict()
         
@@ -369,7 +384,7 @@ class HEP(ImageDescriptor):
             Conventional name for the group-invariant dictionary 
         """
         retval = self.__class__.__name__\
-            + '-' + self._group_action\
+            + '-' + self._get_group_action()\
             + '-' + str(self._get_num_peripheral_points()) + 'beads'\
             + '-' + str(self._get_num_colours()) + 'colours'
         return retval
@@ -434,22 +449,16 @@ class HEP(ImageDescriptor):
             invariant_dict = self._compute_invariant_dictionary()
         
         return invariant_dict
-        
+    
+    @abstractmethod    
     def _compute_invariant_dictionary(self):
-        retval = None
-        if self._group_action is not None:
-            retval =\
-                group_invariant_dictionary(self._get_dictionary(),
-                                           num_colours = self._get_num_colours(),
-                                           num_points = self._get_num_peripheral_points(),
-                                           group_action = self._group_action) 
-        return retval
-        
+        """Sub-class specific method to compute the action-invariant dictionary"""
+               
     def __repr__(self):
         retval = self.__class__.__name__\
             + '-r' + str(self._radius)\
             + '-n' + str(self._num_peripheral_points)
-        if self._group_action is None:
+        if self._get_group_action() is None:
             retval = retval + '-gNone'
         else:
             retval = retval + '-g' + self._group_action
@@ -466,10 +475,6 @@ class HEPLocalThresholding(HEP):
                          num_peripheral_points = num_peripheral_points, 
                          is_full = True,
                          group_action = group_action, **kwargs)
-
-        #Generate the weights or defining the dictionary
-        self._weights = self._get_num_colours() **\
-            np.arange(self._num_peripheral_points) 
     
     @abstractmethod
     def _get_pivot(self):

@@ -26,8 +26,47 @@ class HEPGS(HEP):
         self._gs_layers = matrix_displaced_copies(self._img_in.get_data(), 
                                                   self._neighbourhood.\
                                                   get_integer_points()) 
+
+class LBPDict():
+    def _get_weights(self):
+        weights = self._get_num_colours() **\
+            np.arange(self._get_num_peripheral_points())
+        return weights
+    
+    def _get_dictionary(self):
+        dictionary = list(range(self._get_num_colours() **\
+                          self._get_num_peripheral_points()))
+        return dictionary
+      
+    def _compute_invariant_dictionary(self):
+        retval = group_invariant_dictionary(
+            self._get_dictionary(),
+            num_colours = self._get_num_colours(),
+            group_action = self._get_group_action()) 
+        return retval   
+    
+class ILBPDict():
+    def _get_weights(self):
+        weights = self._get_num_colours() **\
+            np.arange(self._get_num_points())
+        return weights 
+    
+    def _get_dictionary(self):
+        dictionary = list(range(self._get_num_colours() **\
+                          self._get_num_points()))
+        return dictionary  
+    
+    def _compute_invariant_dictionary(self):
+        center_index = self._get_center_index()
+        retval = group_invariant_dictionary(
+            self._get_dictionary(),
+            num_colours = self._get_num_colours(),
+            group_action = self._get_group_action(),
+            excluded_point = center_index) 
+        return retval     
+    
         
-class LBPBasics(HEP):
+class LBPBasics():
     """Basic functions for LBP-like descriptors"""
     
     @staticmethod
@@ -40,13 +79,8 @@ class LBPBasics(HEP):
     
     @staticmethod
     def _get_thresholds():
-        return [0]
-    
-    def _get_dictionary(self):
-        dictionary = list(range(self._get_num_colours() **\
-                          self._get_num_peripheral_points()))
-        return dictionary
-    
+        return [0]     
+        
 class ILBPBasics(LBPBasics):
     """Basic functions for ILBP-like descriptors"""
     
@@ -57,7 +91,7 @@ class ILBPBasics(LBPBasics):
         return dictionary        
         
         
-class LBP(LBPBasics, HEPGS, HEPLocalThresholding):
+class LBP(LBPBasics, LBPDict, HEPGS, HEPLocalThresholding):
     """Local binary patterns
     
     References
@@ -66,7 +100,7 @@ class LBP(LBPBasics, HEPGS, HEPLocalThresholding):
         Multiresolution gray-scale and rotation invariant texture 
         classification with local binary patterns (2002) IEEE Transactions
         on Pattern Analysis and Machine Intelligence, 24 (7), pp. 971-987
-    """
+    """   
         
     @doc_inherit
     def _get_pivot(self):
@@ -79,7 +113,7 @@ class LBP(LBPBasics, HEPGS, HEPLocalThresholding):
     def __repr__(self):
         return super().__repr__()
     
-class ILBP(ILBPBasics, HEPGS, HEPLocalThresholding):
+class ILBP(ILBPBasics, ILBPDict, HEPGS, HEPLocalThresholding):
     """Improved Local binary patterns
     
     References
@@ -89,6 +123,16 @@ class ILBP(ILBPBasics, HEPGS, HEPLocalThresholding):
         (2004) Proceedings - Third International Conference on Image and 
         Graphics, pp. 306-309
     """
+        
+    def _get_weights(self):
+        weights = self._get_num_colours() **\
+            np.arange(self._get_num_peripheral_points())
+        return weights
+    
+    def _get_dictionary(self):
+        dictionary = list(range(self._get_num_colours() **\
+                          self._get_num_peripheral_points()))
+        return dictionary         
         
     @doc_inherit
     def _get_pivot(self):

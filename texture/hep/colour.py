@@ -1,7 +1,7 @@
 from cenotaph.third_parties.doc_inherit import doc_inherit
 
 from cenotaph.texture.hep.basics import HEP, HEPLocalThresholding
-from cenotaph.texture.hep.greyscale import LBPBasics
+from cenotaph.texture.hep.greyscale import LBPBasics, LBPDict
 from cenotaph.basics.matrix_displaced_copies import matrix_displaced_copies
 
 class HEPColour(HEP):
@@ -18,7 +18,7 @@ class HEPColour(HEP):
                                         self._neighbourhood.\
                                         get_integer_points())) 
                
-class OCLBP(LBPBasics, HEPColour, HEPLocalThresholding):
+class OCLBP(LBPBasics, LBPDict, HEPColour, HEPLocalThresholding):
     """Opponent-colour Local binary patterns"""
     
     @doc_inherit
