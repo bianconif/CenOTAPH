@@ -122,6 +122,11 @@ class ILBP(LBPBasics, ILBPDict, HEPGS, HEPLocalThresholding):
     def _get_dictionary(self):
         dictionary = list(range(self._get_num_colours() **\
                           self._get_num_points()))
+        
+        #Remove the '0' pattern from the dictionary, as this is by definition
+        #impossible
+        dictionary.remove(0)
+        
         return dictionary         
         
     @doc_inherit

@@ -439,7 +439,7 @@ class HEP(ImageDescriptor):
                 invariant_dict = self._compute_invariant_dictionary()
                 original_dict = self._get_dictionary()
                 with open(source, 'w') as out_file:
-                    for _, i in enumerate(original_dict):
+                    for i, _ in enumerate(original_dict):
                         out_file.write('{:d},{:d}\n'.format(original_dict[i],
                                                             invariant_dict[i]))
                 
