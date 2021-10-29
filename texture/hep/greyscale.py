@@ -27,7 +27,7 @@ class HEPGS(HEP):
                                                   self._neighbourhood.\
                                                   get_integer_points()) 
 
-class LBPDict():
+class LBPDict(HEP):
     def _get_weights(self):
         weights = self._get_num_colours() **\
             np.arange(self._get_num_peripheral_points())
@@ -45,7 +45,7 @@ class LBPDict():
             group_action = self._get_group_action()) 
         return retval   
     
-class ILBPDict():
+class ILBPDict(HEP):
     def _get_weights(self):
         weights = self._get_num_colours() **\
             np.arange(self._get_num_points())
@@ -80,17 +80,7 @@ class LBPBasics():
     @staticmethod
     def _get_thresholds():
         return [0]     
-        
-class ILBPBasics(LBPBasics):
-    """Basic functions for ILBP-like descriptors"""
-    
-    #Override
-    def _get_dictionary(self):
-        dictionary = list(range(self._get_num_colours() **\
-                          self._get_num_points()))
-        return dictionary        
-        
-        
+            
 class LBP(LBPBasics, LBPDict, HEPGS, HEPLocalThresholding):
     """Local binary patterns
     
@@ -113,7 +103,7 @@ class LBP(LBPBasics, LBPDict, HEPGS, HEPLocalThresholding):
     def __repr__(self):
         return super().__repr__()
     
-class ILBP(ILBPBasics, ILBPDict, HEPGS, HEPLocalThresholding):
+class ILBP(LBPBasics, ILBPDict, HEPGS, HEPLocalThresholding):
     """Improved Local binary patterns
     
     References
@@ -126,12 +116,12 @@ class ILBP(ILBPBasics, ILBPDict, HEPGS, HEPLocalThresholding):
         
     def _get_weights(self):
         weights = self._get_num_colours() **\
-            np.arange(self._get_num_peripheral_points())
+            np.arange(self._get_num_points())
         return weights
     
     def _get_dictionary(self):
         dictionary = list(range(self._get_num_colours() **\
-                          self._get_num_peripheral_points()))
+                          self._get_num_points()))
         return dictionary         
         
     @doc_inherit

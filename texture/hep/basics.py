@@ -139,7 +139,7 @@ class HEP(ImageDescriptor):
         if 'cache_folder' in kwargs.keys():
             self._cache_folder = kwargs['cache_folder']
         
-    def _get_grup_action(self):
+    def _get_group_action(self):
         return self._group_action
     
     def _get_center_index(self):
