@@ -1,7 +1,9 @@
+import numpy as np
+
 from cenotaph.third_parties.doc_inherit import doc_inherit
 
 from cenotaph.texture.hep.basics import HEP, HEPLocalThresholding
-from cenotaph.texture.hep.greyscale import LBPBasics, LBPDict
+from cenotaph.texture.hep.greyscale import LBPBasics, LBPDict, ILBPDict
 from cenotaph.basics.matrix_displaced_copies import matrix_displaced_copies
 
 class HEPColour(HEP):
@@ -61,3 +63,45 @@ class OCLBP(LBPBasics, LBPDict, HEPColour, HEPLocalThresholding):
         
         return base_values
     
+class IOCLBP(LBPBasics, ILBPDict, HEPColour, HEPLocalThresholding):
+    """Improved Opponent-colour Local binary patterns"""
+    
+    @doc_inherit
+    def __init__(self, radius=1, num_peripheral_points=8, group_action=None, 
+                 **kwargs):
+        super().__init__(radius=radius, 
+                         num_peripheral_points=num_peripheral_points, 
+                         group_action=group_action, **kwargs)
+                
+    @doc_inherit
+    def _get_pivot(self):
+        
+        pivots = list()
+        
+        #Intra-channel pivots
+        for channel in self._colour_layers:
+            pivots.append(np.mean(channel, axis=2))
+        
+        #Inter-channel pivots
+        pivots.append(np.mean(self._colour_layers[0], axis=2))
+        pivots.append(np.mean(self._colour_layers[0], axis=2))
+        pivots.append(np.mean(self._colour_layers[1], axis=2))
+    
+        return pivots
+
+    @doc_inherit
+    def _get_base_values(self):
+        
+        base_values = list()
+        
+        #Intra-channel base values
+        for channel in self._colour_layers:
+            base_values.append(channel)  
+            
+        #Inter-channel base values -- respectively R, G and B
+        base_values.append(self._colour_layers[1])
+        base_values.append(self._colour_layers[2])
+        base_values.append(self._colour_layers[2])        
+        
+        
+        return base_values
