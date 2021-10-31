@@ -4,7 +4,7 @@ from cenotaph.basics.generic_functions import combine_patterns
 from cenotaph.basics.matrix_displaced_copies import matrix_displaced_copies
 from cenotaph.basics.base_classes import *
 
-class SymmetryTransform(ImageDescriptorGS):
+class SymmetryTransform(SingleChannelImageDescriptor):
     """LOCuST: LOCal Symmetry Transform. Abstract base class"""
     
     def __init__(self, imgfile, resolution=3, geometric_transform='r90', \

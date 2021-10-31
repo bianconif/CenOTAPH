@@ -9,7 +9,7 @@ from tensorflow.python.eager.context import eager_mode
 import cenotaph.basics.base_classes as bc
 from cenotaph.third_parties.doc_inherit import doc_inherit
 
-class ImageFiltering(bc.ImageDescriptorGS):
+class ImageFiltering(bc.SingleChannelImageDescriptor):
     """Generic image image filtering. Implementation based on TensorFlow"""
     
     def __init__(self, filter_bank, feature_type = 'MV', \

@@ -475,8 +475,8 @@ class ImageDescriptor(ImageHandler):
         
         return fv
 
-class ImageDescriptorGS(ImageDescriptor):
-    """Generic grey-scale image descriptor"""
+class SingleChannelImageDescriptor(ImageDescriptor):
+    """Generic image descriptor fro single-channel images"""
     
     def __init__(self, gsconversion='Luminance'):
         """Default constructor
@@ -506,25 +506,36 @@ class ImageDescriptorGS(ImageDescriptor):
         #Convert to greyscale if required
         if not self._img_in.get_type() == ImageType.GS:
             self._img_in.to_greyscale(self._gsconversion)
+            
+class IntraChannelImageDescriptor(ImageDescriptor):
+    """Concatenation on image features computed on each channel"""
+    
+    def __init__(self, base_descriptor):
+        """
+        Parameters
+        ----------
+        base_descriptor: SingleChannelImageDescriptor
+            The base descriptor.
+        """
+        self._base_descriptor = base_descriptor
+        
+    def _compute_features(self):
+        
+        raw_data = self._img_in.get_data()
+        features = np.empty([0])
+        
+        #Compute the features from each colour channel and concatenate them
+        for ch in range(raw_data.shape[2]):
+            single_channel_img = Image.from_array(data = raw_data[:,:,ch], 
+                                                  img_type=ImageType.GS)
+            features_ = self._base_descriptor.get_features(single_channel_img)
+            features = np.hstack((features, features_))
+            
+        a = 0
+        return features
+        
         
             
-    #def standardise(self):
-        #"""Zero mean and unit variance standardization
-        
-        #Parameters
-        #----------
-            #bit_depth : int
-                #The number of bits used for image encoding
-        #"""
-        
-        ##Normalize into the [0,1] interval
-        #nimg = self._img/(2**bit_depth)
-        
-        ##Normalize to zero mean and unit variance
-        #mean = np.mean(nimg)
-        #var = np.var(nimg)
-        #nimg = (nimg - mean)/var
-        
 class ImagePreprocessorS(ImageHandler):
     """Abstract base class for image preprocessing when the preprocessing
     operation returns only one image for each input image""" 

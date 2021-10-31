@@ -3,8 +3,10 @@ import numpy as np
 from cenotaph.third_parties.doc_inherit import doc_inherit
 
 from cenotaph.texture.hep.basics import HEP, HEPLocalThresholding
-from cenotaph.texture.hep.greyscale import LBPBasics, LBPDict, ILBPDict
+from cenotaph.texture.hep.greyscale import LBP, LBPBasics, LBPDict, ILBPDict
 from cenotaph.basics.matrix_displaced_copies import matrix_displaced_copies
+from cenotaph.basics.base_classes import ImageDescriptor,\
+     IntraChannelImageDescriptor
 
 class HEPColour(HEP):
     """Base class for three-channel colour descriptors of the HEP family"""
@@ -19,9 +21,9 @@ class HEPColour(HEP):
                 matrix_displaced_copies(raw_img_data[:,:,channel], 
                                         self._neighbourhood.\
                                         get_integer_points())) 
-               
-class OCLBP(LBPBasics, LBPDict, HEPColour, HEPLocalThresholding):
-    """Opponent-colour Local binary patterns"""
+            
+class InterChannelLBP(LBPBasics, LBPDict, HEPColour, HEPLocalThresholding):
+    """Inter-channel LBP features"""
     
     @doc_inherit
     def __init__(self, radius=1, num_peripheral_points=8, group_action=None, 
@@ -35,10 +37,6 @@ class OCLBP(LBPBasics, LBPDict, HEPColour, HEPLocalThresholding):
         
         pivots = list()
         
-        #Intra-channel pivots
-        for channel in self._colour_layers:
-            pivots.append(channel[:,:,self._neighbourhood.center_index()])
-        
         #Inter-channel pivots
         pivots.append(self._colour_layers[0][:,:,self._neighbourhood.center_index()])
         pivots.append(self._colour_layers[0][:,:,self._neighbourhood.center_index()])
@@ -50,18 +48,42 @@ class OCLBP(LBPBasics, LBPDict, HEPColour, HEPLocalThresholding):
     def _get_base_values(self):
         
         base_values = list()
-        
-        #Intra-channel base values
-        for channel in self._colour_layers:
-            base_values.append(channel[:,:,self._neighbourhood.peripheral_indices()])  
-            
+                    
         #Inter-channel base values -- respectively R, G and B
         base_values.append(self._colour_layers[1][:,:,self._neighbourhood.peripheral_indices()])
         base_values.append(self._colour_layers[2][:,:,self._neighbourhood.peripheral_indices()])
         base_values.append(self._colour_layers[2][:,:,self._neighbourhood.peripheral_indices()])        
         
         
-        return base_values
+        return base_values    
+               
+class OCLBP(ImageDescriptor):
+    """Opponent-colour Local binary patterns"""
+    
+    def __init__(self, radius=1, num_peripheral_points=8, group_action=None,
+                 **kwargs):
+         
+        #Intra-channel calculator
+        self._lbp = LBP(radius = radius, 
+                        num_peripheral_points = num_peripheral_points, 
+                        group_action = group_action,
+                        **kwargs) 
+        self._intra_channel_lbp = IntraChannelImageDescriptor(self._lbp)
+        
+        #Inter-channel calculator
+        self._inter_channel_lbp = InterChannelLBP(
+            radius = radius, num_peripheral_points = num_peripheral_points, 
+            group_action = group_action, **kwargs)
+        
+    def _compute_features(self):
+        
+        intra_channel_features = self._intra_channel_lbp.get_features(
+            self._img_in) 
+        inter_channel_features = self._inter_channel_lbp.get_features(
+            self._img_in)
+        
+        return np.hstack((intra_channel_features, inter_channel_features))
+                
     
 class IOCLBP(LBPBasics, ILBPDict, HEPColour, HEPLocalThresholding):
     """Improved Opponent-colour Local binary patterns"""

@@ -5,10 +5,11 @@ import os
 
 import numpy as np
 
-from cenotaph.basics.base_classes import ImageDescriptor, ImageDescriptorGS
+from cenotaph.basics.base_classes import ImageDescriptor, SingleChannelImageDescriptor
 from cenotaph.basics.generic_functions import multilevel_thresholding
 from cenotaph.basics.neighbourhood import *
 from cenotaph.basics.matrix_displaced_copies import matrix_displaced_copies
+from cenotaph.basics.base_classes import ImageType
 from cenotaph.texture.hep.basics import *
 
 from cenotaph.third_parties.doc_inherit import doc_inherit
@@ -20,14 +21,15 @@ class HEPGS(HEP):
     def _pre_compute_features(self):
         
         #Convert the input image to greyscale if required
-        self._img_in.to_greyscale(conversion='Luminance')
+        if not (self._img_in.get_type() == ImageType.GS):
+            self._img_in.to_greyscale(conversion='Luminance')
         
         #Generate displaced copies of the input image
         self._gs_layers = matrix_displaced_copies(self._img_in.get_data(), 
                                                   self._neighbourhood.\
                                                   get_integer_points()) 
 
-class LBPDict(HEP):
+class LBPDict():
     def _get_weights(self):
         weights = self._get_num_colours() **\
             np.arange(self._get_num_peripheral_points())
@@ -45,7 +47,8 @@ class LBPDict(HEP):
             group_action = self._get_group_action()) 
         return retval   
     
-class ILBPDict(HEP):
+class ILBPDict():
+        
     def _get_weights(self):
         weights = self._get_num_colours() **\
             np.arange(self._get_num_points())
@@ -54,7 +57,8 @@ class ILBPDict(HEP):
     def _get_dictionary(self):
         dictionary = list(range(self._get_num_colours() **\
                           self._get_num_points()))
-        return dictionary  
+        
+        return dictionary   
     
     def _compute_invariant_dictionary(self):
         center_index = self._get_center_index()
@@ -63,7 +67,18 @@ class ILBPDict(HEP):
             num_colours = self._get_num_colours(),
             group_action = self._get_group_action(),
             excluded_point = center_index) 
-        return retval     
+        return retval   
+    
+class ILBPDictNoZero(ILBPDict):
+        
+    #Override
+    def _get_dictionary(self):
+        dictionary = super()._get_dictionary()
+        
+        #Remove the 'all zeros' pattern
+        dictionary.remove(0)
+        
+        return dictionary
     
         
 class LBPBasics():
@@ -102,8 +117,8 @@ class LBP(LBPBasics, LBPDict, HEPGS, HEPLocalThresholding):
                          
     def __repr__(self):
         return super().__repr__()
-    
-class ILBP(LBPBasics, ILBPDict, HEPGS, HEPLocalThresholding):
+
+class ILBP(LBPBasics, ILBPDictNoZero, HEPGS, HEPLocalThresholding):
     """Improved Local binary patterns
     
     References
@@ -113,22 +128,7 @@ class ILBP(LBPBasics, ILBPDict, HEPGS, HEPLocalThresholding):
         (2004) Proceedings - Third International Conference on Image and 
         Graphics, pp. 306-309
     """
-        
-    def _get_weights(self):
-        weights = self._get_num_colours() **\
-            np.arange(self._get_num_points())
-        return weights
-    
-    def _get_dictionary(self):
-        dictionary = list(range(self._get_num_colours() **\
-                          self._get_num_points()))
-        
-        #Remove the '0' pattern from the dictionary, as this is by definition
-        #impossible
-        dictionary.remove(0)
-        
-        return dictionary         
-        
+            
     @doc_inherit
     def _get_pivot(self):
         return [np.mean(self._gs_layers, axis=2)]
