@@ -55,7 +55,42 @@ class InterChannelLBP(LBPBasics, LBPDict, HEPColour, HEPLocalThresholding):
         base_values.append(self._colour_layers[2][:,:,self._neighbourhood.peripheral_indices()])        
         
         
-        return base_values    
+        return base_values
+    
+class InterChannelILBP(LBPBasics, LBPDict, HEPColour, HEPLocalThresholding):
+    """Inter-channel ILBP features"""
+    
+    @doc_inherit
+    def __init__(self, radius=1, num_peripheral_points=8, group_action=None, 
+                 **kwargs):
+        super().__init__(radius=radius, 
+                         num_peripheral_points=num_peripheral_points, 
+                         group_action=group_action, **kwargs)
+                
+    @doc_inherit
+    def _get_pivot(self):
+        
+        pivots = list()
+        
+        #Inter-channel pivots
+        pivots.append(np.mean(self._colour_layers[0], axis = 2))
+        pivots.append(np.mean(self._colour_layers[0], axis = 2))
+        pivots.append(np.mean(self._colour_layers[1], axis = 2))
+    
+        return pivots
+
+    @doc_inherit
+    def _get_base_values(self):
+        
+        base_values = list()
+                    
+        #Inter-channel base values -- respectively R, G and B
+        base_values.append(self._colour_layers[1])
+        base_values.append(self._colour_layers[2])
+        base_values.append(self._colour_layers[2])        
+        
+        
+        return base_values 
                
 class OCLBP(ImageDescriptor):
     """Opponent-colour Local binary patterns"""
