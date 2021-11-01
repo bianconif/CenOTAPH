@@ -3,9 +3,9 @@ import numpy as np
 from cenotaph.third_parties.doc_inherit import doc_inherit
 
 from cenotaph.texture.hep.basics import HEP, HEPLocalThresholding
-from cenotaph.texture.hep.greyscale import LBP, LBPBasics, LBPDict, ILBPDict
+from cenotaph.texture.hep.greyscale import LBP, ILBP, LBPBasics, LBPDict, ILBPDict
 from cenotaph.basics.matrix_displaced_copies import matrix_displaced_copies
-from cenotaph.basics.base_classes import ImageDescriptor,\
+from cenotaph.basics.base_classes import ImageDescriptor, Ensemble,\
      IntraChannelImageDescriptor
 
 class HEPColour(HEP):
@@ -57,7 +57,7 @@ class InterChannelLBP(LBPBasics, LBPDict, HEPColour, HEPLocalThresholding):
         
         return base_values
     
-class InterChannelILBP(LBPBasics, LBPDict, HEPColour, HEPLocalThresholding):
+class InterChannelILBP(LBPBasics, ILBPDict, HEPColour, HEPLocalThresholding):
     """Inter-channel ILBP features"""
     
     @doc_inherit
@@ -91,7 +91,7 @@ class InterChannelILBP(LBPBasics, LBPDict, HEPColour, HEPLocalThresholding):
         
         
         return base_values 
-               
+                   
 class OCLBP(ImageDescriptor):
     """Opponent-colour Local binary patterns"""
     
@@ -120,45 +120,29 @@ class OCLBP(ImageDescriptor):
         return np.hstack((intra_channel_features, inter_channel_features))
                 
     
-class IOCLBP(LBPBasics, ILBPDict, HEPColour, HEPLocalThresholding):
-    """Improved Opponent-colour Local binary patterns"""
+class IOCLBP(ImageDescriptor):
+    """Opponent-colour Local binary patterns"""
     
-    @doc_inherit
-    def __init__(self, radius=1, num_peripheral_points=8, group_action=None, 
+    def __init__(self, radius=1, num_peripheral_points=8, group_action=None,
                  **kwargs):
-        super().__init__(radius=radius, 
-                         num_peripheral_points=num_peripheral_points, 
-                         group_action=group_action, **kwargs)
-                
-    @doc_inherit
-    def _get_pivot(self):
+         
+        #Intra-channel calculator
+        self._ilbp = ILBP(radius = radius, 
+                          num_peripheral_points = num_peripheral_points, 
+                          group_action = group_action,
+                          **kwargs) 
+        self._intra_channel_ilbp = IntraChannelImageDescriptor(self._ilbp)
         
-        pivots = list()
+        #Inter-channel calculator
+        self._inter_channel_ilbp = InterChannelILBP(
+            radius = radius, num_peripheral_points = num_peripheral_points, 
+            group_action = group_action, **kwargs)
         
-        #Intra-channel pivots
-        for channel in self._colour_layers:
-            pivots.append(np.mean(channel, axis=2))
+    def _compute_features(self):
         
-        #Inter-channel pivots
-        pivots.append(np.mean(self._colour_layers[0], axis=2))
-        pivots.append(np.mean(self._colour_layers[0], axis=2))
-        pivots.append(np.mean(self._colour_layers[1], axis=2))
-    
-        return pivots
-
-    @doc_inherit
-    def _get_base_values(self):
+        intra_channel_features = self._intra_channel_ilbp.get_features(
+            self._img_in) 
+        inter_channel_features = self._inter_channel_ilbp.get_features(
+            self._img_in)
         
-        base_values = list()
-        
-        #Intra-channel base values
-        for channel in self._colour_layers:
-            base_values.append(channel)  
-            
-        #Inter-channel base values -- respectively R, G and B
-        base_values.append(self._colour_layers[1])
-        base_values.append(self._colour_layers[2])
-        base_values.append(self._colour_layers[2])        
-        
-        
-        return base_values
+        return np.hstack((intra_channel_features, inter_channel_features))
