@@ -1,9 +1,12 @@
+from abc import abstractmethod
+
 import numpy as np
 
 from cenotaph.third_parties.doc_inherit import doc_inherit
 
 from cenotaph.texture.hep.basics import HEP, HEPLocalThresholding
 from cenotaph.texture.hep.greyscale import LBP, ILBP, LBPBasics, LBPDict, ILBPDict
+from cenotaph.basics.generic_functions import is_documented_by
 from cenotaph.basics.matrix_displaced_copies import matrix_displaced_copies
 from cenotaph.basics.base_classes import ImageDescriptor, Ensemble,\
      IntraChannelImageDescriptor
@@ -91,58 +94,56 @@ class InterChannelILBP(LBPBasics, ILBPDict, HEPColour, HEPLocalThresholding):
         
         
         return base_values 
-                   
-class OCLBP(ImageDescriptor):
-    """Opponent-colour Local binary patterns"""
     
+class _IntraAndInterChannelHEP(ImageDescriptor):
+    """Base class for colour HEP descriptors based on intra- and inter-channel
+    features"""
+    
+    @is_documented_by(HEP.__init__)
     def __init__(self, radius=1, num_peripheral_points=8, group_action=None,
-                 **kwargs):
-         
-        #Intra-channel calculator
-        self._lbp = LBP(radius = radius, 
-                        num_peripheral_points = num_peripheral_points, 
-                        group_action = group_action,
-                        **kwargs) 
-        self._intra_channel_lbp = IntraChannelImageDescriptor(self._lbp)
+                 **kwargs):  
         
-        #Inter-channel calculator
-        self._inter_channel_lbp = InterChannelLBP(
-            radius = radius, num_peripheral_points = num_peripheral_points, 
-            group_action = group_action, **kwargs)
+        #Store the parameters passed
+        self._params = locals().copy()
+        self._params.pop('self')
         
+        #Set the kernel
+        self._set_kernel()
+        
+    @abstractmethod
+    def _set_kernel(self):
+        """Set the kernel (intra- and inter-channel) descriptors"""
+              
     def _compute_features(self):
+        return self._kernel.get_features(self._img_in)
         
-        intra_channel_features = self._intra_channel_lbp.get_features(
-            self._img_in) 
-        inter_channel_features = self._inter_channel_lbp.get_features(
-            self._img_in)
-        
-        return np.hstack((intra_channel_features, inter_channel_features))
-                
     
-class IOCLBP(ImageDescriptor):
-    """Opponent-colour Local binary patterns"""
+class OCLBP(_IntraAndInterChannelHEP):
+    """Opponent-colour Local binary patterns.
     
-    def __init__(self, radius=1, num_peripheral_points=8, group_action=None,
-                 **kwargs):
-         
-        #Intra-channel calculator
-        self._ilbp = ILBP(radius = radius, 
-                          num_peripheral_points = num_peripheral_points, 
-                          group_action = group_action,
-                          **kwargs) 
-        self._intra_channel_ilbp = IntraChannelImageDescriptor(self._ilbp)
-        
-        #Inter-channel calculator
-        self._inter_channel_ilbp = InterChannelILBP(
-            radius = radius, num_peripheral_points = num_peripheral_points, 
-            group_action = group_action, **kwargs)
-        
-    def _compute_features(self):
-        
-        intra_channel_features = self._intra_channel_ilbp.get_features(
-            self._img_in) 
-        inter_channel_features = self._inter_channel_ilbp.get_features(
-            self._img_in)
-        
-        return np.hstack((intra_channel_features, inter_channel_features))
+    References
+    ----------
+    [1] Maenpaa, T., Pietikainen, M.
+        Texture analysis with local binary patterns
+        (2005) Handbook of Pattern Recognition and Computer Vision, 3rd Edition, 
+        pp. 197-216. 
+    """
+    
+    def _set_kernel(self):    
+        self._kernel = Ensemble([IntraChannelImageDescriptor(LBP(**self._params)), 
+                                 InterChannelLBP(**self._params)])
+                       
+class IOCLBP(_IntraAndInterChannelHEP):
+    """Improved Opponent-colour Local binary patterns.
+    
+    References
+    ----------
+    [1] Bianconi, F., Bello-Cerezo, R., Napoletano, P.
+        Improved opponent color local binary patterns: An effective local image 
+        descriptor for color texture classification
+        (2018) Journal of Electronic Imaging, 27 (1), art. no. 011002
+    """
+    
+    def _set_kernel(self):    
+        self._kernel = Ensemble([IntraChannelImageDescriptor(ILBP(**self._params)), 
+                                 InterChannelILBP(**self._params)])

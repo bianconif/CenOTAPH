@@ -605,7 +605,12 @@ def pairwise_distances(matrix, p=2, verbose=False):
     return distances, pairs
    
     
-    
+def is_documented_by(original):
+    """Reuse docstring from another function"""
+    def wrapper(target):
+        target.__doc__ = original.__doc__
+        return target
+    return wrapper
   
     
     
