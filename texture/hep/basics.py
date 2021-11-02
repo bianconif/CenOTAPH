@@ -90,8 +90,12 @@ def group_invariant_dictionary(dictionary_in, num_colours, group_action,
     words = convert_base(dictionary_in, num_colours)
     
     #Compute the orbits
+    optional_params = {}
+    if 'excluded_point' in kwargs.keys():
+        optional_params.update({'exclude': set([kwargs['excluded_point']])})
+        
     _, dictionary_out, _ = find_orbits(words, group_action, 
-                                       method, **kwargs)
+                                       method, **optional_params)
         
     #Return the group-invariant labels
     return dictionary_out
