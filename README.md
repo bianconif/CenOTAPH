@@ -18,7 +18,7 @@ CenOTAPH also contains functions and classes for:
 - Statistics and combinatorics
 
 ## Usage
-The `master` branch stores the official release history. Please consider that the toolbox is not thoroughly tested and can therefore contain serious errors. These may result in instability, crashes and/or data loss (please see also the [Disclaimer](disclaimer) below).
+The `master` branch stores the official release history, and releases are marked with tags. Please consider that the toolbox is not thoroughly tested and can therefore contain serious errors. These may result in instability, crashes and/or data loss (please see also the [Disclaimer](disclaimer) below).
 
 ## Dependencies
 _Under construction_
