@@ -20,9 +20,6 @@ CenOTAPH also contains functions and classes for:
 ## Note
 Please consider that the toolbox is not thoroughly tested and can therefore contain serious errors. These may result in instability, crashes and/or data loss (please see also the [Disclaimer](#disclaimer) below).
 
-## Dependencies
-_Under construction_
-
 ## License
 The code in this repository is distributed under [GNU General Public License v3.0](https://choosealicense.com/licenses/gpl-3.0/)
 
