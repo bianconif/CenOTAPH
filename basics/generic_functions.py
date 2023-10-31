@@ -502,12 +502,13 @@ def get_files_in_folder(folder):
         paths are relative to the input folder and include this one
     """
     
-    files = list()
-        
-    for dirName, subdirList, fileList in os.walk(folder):
-        for fname in fileList:
-            files.append((dirName + '/' + fname).replace('\\','/'))
-             
+    #Filter the folder content
+    files = [f for f in os.listdir(folder) if 
+             os.path.isfile(os.path.join(folder, f))]
+    
+    #Get the full paths
+    files = [os.path.join(folder, f) for f in files]
+                     
     return files
 
 def mann_whitney_two_sided(x, y, alpha):
