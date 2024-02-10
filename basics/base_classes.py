@@ -75,6 +75,54 @@ class Image():
         img._set_bit_depth()
         img._set_n_channels()     
         return img
+    
+    @classmethod
+    def blend_gs_images_to_rgb(cls, gs_images):
+        """Create a pseudo-colour image from three grey-scale images
+        
+        Parameters
+        ----------
+        gs_images: sequence of Image (3)
+            The grey-scale images. The first, second, and third image
+            respectively go to the red, green and blue channel of blended
+            image. The input images need to have the same size.
+        
+        Returns
+        -------
+        blended_img: Image
+            The blended image
+        """
+        
+        #Check the length of the input vector
+        n_images = len(gs_images)
+        if len(gs_images) != 3:
+            raise Exception((f'Three grey-scale images are needed, '
+                             f'{n_images} were given'))
+        
+        #Check the input images are all grey-scale
+        for gs_image in gs_images:
+            if gs_image.get_type() != ImageType.GS:
+                raise Exception('All images should be grey-scale')
+        
+        #Get data type and size from the first grey-scale image
+        template_gs_img = gs_images[0]
+        raw_data = template_gs_img.get_data()
+        size = raw_data.shape
+        dtype = type(raw_data.flatten()[0])
+        
+        #Initialise the data for the blended image
+        blended_img_data = np.zeros(shape=[size[0], size[1], 3], 
+                                    dtype=dtype) 
+        
+        #Fill the channels with the data from the grey-scale images
+        for i, gs_image in enumerate(gs_images):
+            blended_img_data[:,:,i] = gs_image.get_data()
+        
+        #Create the blended RGB image
+        blended_img = cls.from_array(data=blended_img_data, 
+                                     img_type=ImageType.RGB)
+        return blended_img
+
         
     
     def copy(self):
@@ -399,6 +447,8 @@ class Image():
         bwimage = (bwimage > 0).astype(data_type)
         
         return bwimage
+    
+
         
 class ImageHandler(ABC):
     """Generic image processor, superclasses ImageDescriptor and ImagePreprocessor""" 
