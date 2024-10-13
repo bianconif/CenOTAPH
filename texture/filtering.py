@@ -217,9 +217,10 @@ class Gabor(ImageFiltering):
     """Image features based on Gabor filters"""
     
     def __init__(self, feature_type='MV', mode='SAME', stride=1, 
-                 gsconversion='Luminance', size = 5, orientations=6, scales=5, 
-                 scaling_factor=(2 ** 0.5), complex=True, sigma=None, 
-                 lambda_=None, ellipt=1, phase=0):
+                 gsconversion='Luminance', size = 5, orientations=6, 
+                 scales=5, scaling_factor=(2 ** 0.5), complex_=True, 
+                 sigma=None, lambda_=None, ellipt=1, phase=0):
+        
         """The constructor
         
         Parameters
@@ -233,11 +234,17 @@ class Gabor(ImageFiltering):
         self._size = size
         self._num_scales = scales
         self._num_orientations = orientations
-        
+                
         filter_bank = gabor(sz = self._size, 
                             orientations = self._num_orientations, 
-                            scales = self._num_scales)
-        super().__init__(filter_bank = filter_bank, feature_type = feature_type, 
+                            scales = self._num_scales,
+                            scaling_factor=scaling_factor,
+                            complex_=complex_,
+                            sigma=sigma, lambda_=lambda_, ellipt=ellipt,
+                            phase=phase)
+        
+        super().__init__(filter_bank = filter_bank, 
+                         feature_type = feature_type, 
                          mode = mode, gsconversion = gsconversion)   
         
     def __repr__(self):
@@ -315,7 +322,7 @@ def separable_filters(singledim):
     return f.reshape([sz, sz, -1])
 
 def gabor(sz, orientations=6, scales=5, scaling_factor=(2 ** 0.5),
-          complex=True, sigma=None, lambda_=None,
+          complex_=True, sigma=None, lambda_=None,
           ellipt=1, phase=0, dtype=np.float32):
     """Gabor filters.
 
@@ -329,7 +336,7 @@ def gabor(sz, orientations=6, scales=5, scaling_factor=(2 ** 0.5),
         Number of scales
     scaling_factor : float
         Ratio between consecutive scales
-    complex : bool
+    complex_ : bool
         Whether to include filters corresponding to the imaginary part
     sigma : float 
         Shape of the Gaussuian envelope (default (sz - 1) / 5)
@@ -343,7 +350,7 @@ def gabor(sz, orientations=6, scales=5, scaling_factor=(2 ** 0.5),
     Returns
     -------
     - (sz, sz, orientations * scales * comps) array of filters
-      where comps is 1 or 2 depending on the option complex.
+      where comps is 1 or 2 depending on the option complex_.
     """
 
     if sigma is None:
@@ -355,7 +362,7 @@ def gabor(sz, orientations=6, scales=5, scaling_factor=(2 ** 0.5),
     ax = np.arange(sz) - 0.5*(sz - 1)
     x, y = np.meshgrid(ax, ax)
 
-    basis = np.empty((sz, sz, scales, orientations, 1 + complex),
+    basis = np.empty((sz, sz, scales, orientations, 1 + complex_),
                      dtype=dtype)
     for o in range(orientations):
         cos = math.cos(pi * o / orientations)
@@ -369,7 +376,7 @@ def gabor(sz, orientations=6, scales=5, scaling_factor=(2 ** 0.5),
             f = 2 * pi * (scaling_factor ** s) / lambda_
             g2 = np.cos(f * x1 + phase)
             basis[:,:,s,o,0] = g1 * g2
-            if complex:
+            if complex_:
                 g3 = np.sin(f * x1 + phase)
                 basis[:,:,s,o,1] = g1 * g3
     return basis.reshape([sz, sz, -1])
